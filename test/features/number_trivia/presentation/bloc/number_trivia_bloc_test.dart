@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter_clean_architecture/core/error/failure.dart';
 import 'package:flutter_clean_architecture/core/util/input_converter.dart';
 import 'package:flutter_clean_architecture/features/number_trivia/domain/entities/number_trivia.dart';
 import 'package:flutter_clean_architecture/features/number_trivia/presentation/bloc/number_trivia_bloc.dart';
@@ -41,10 +42,13 @@ void main() {
     final tNumberParsed = 1;
     final tNumberTrivia = NumberTrivia(number: 1, text: 'Test');
 
+    void setUpMockInputConverterSuccess() =>
+        when(mockInputConverter.stringToUnsignedInteger(any))
+            .thenReturn(Right(tNumberParsed));
+
     test('should call the input converter to validate and convert', () async {
       // arrange
-      when(mockInputConverter.stringToUnsignedInteger(any))
-          .thenReturn(Right(tNumberParsed));
+      setUpMockInputConverterSuccess();
 
       // act
       bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
@@ -64,6 +68,98 @@ void main() {
       final expected = [
         Empty(),
         Error(errorMessage: INVALID_INPUT_FAILURE_MESSAGE),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
+    });
+
+    test('should get data from the concrete use case', () async {
+      // arrange
+      setUpMockInputConverterSuccess();
+      when(mockGetConcreteNumberTrivia(any))
+          .thenAnswer((_) async => Right(tNumberTrivia));
+
+      // act
+      bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
+      await untilCalled(mockGetConcreteNumberTrivia(any));
+
+      // assert
+      verify(mockGetConcreteNumberTrivia(Params(number: tNumberParsed)));
+    });
+
+    test('should emit [ Loading, Loaded ] when data is gotten successfully',
+        () async {
+      // arrange
+      setUpMockInputConverterSuccess();
+      when(mockGetConcreteNumberTrivia(any))
+          .thenAnswer((_) async => Right(tNumberTrivia));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Loaded(trivia: tNumberTrivia),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
+    });
+    test('should emit [ Loading, Error ] when getting data fails', () async {
+      // arrange
+      setUpMockInputConverterSuccess();
+      when(mockGetConcreteNumberTrivia(any))
+          .thenAnswer((_) async => Left(ServerFailure()));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Error(errorMessage: SERVER_FAILURE_MESSAGE),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
+    });
+
+    test('''should emit [ Loading, Error ] with proper 
+        message when getting data fails''', () async {
+      // arrange
+      setUpMockInputConverterSuccess();
+      when(mockGetConcreteNumberTrivia(any))
+          .thenAnswer((_) async => Left(ServerFailure()));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Error(errorMessage: SERVER_FAILURE_MESSAGE),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
+    });
+
+    test('''should emit [ Loading, Error ] with proper 
+        message for the error when getting data fails''', () async {
+      // arrange
+      setUpMockInputConverterSuccess();
+      when(mockGetConcreteNumberTrivia(any))
+          .thenAnswer((_) async => Left(CacheFailure()));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Error(errorMessage: CACHE_FAILURE_MESSAGE),
       ];
       expectLater(bloc.state, emitsInOrder(expected));
 
