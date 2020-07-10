@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_clean_architecture/core/error/failure.dart';
+import 'package:flutter_clean_architecture/core/use_cases/use_case.dart';
 import 'package:flutter_clean_architecture/core/util/input_converter.dart';
 import 'package:flutter_clean_architecture/features/number_trivia/domain/entities/number_trivia.dart';
 import 'package:flutter_clean_architecture/features/number_trivia/presentation/bloc/number_trivia_bloc.dart';
@@ -165,6 +166,97 @@ void main() {
 
       // act
       bloc.dispatch(GetTriviaForConcreteNumber(tNumberString));
+    });
+  });
+
+  group('GetTriviaForRandomNumber', () {
+    final tNumberTrivia = NumberTrivia(number: 1, text: 'Test');
+
+    test('should get data from the random use case', () async {
+      // arrange
+      when(mockGetRandomNumberTrivia(any))
+          .thenAnswer((_) async => Right(tNumberTrivia));
+
+      // act
+      bloc.dispatch(GetTriviaForRandomNumber());
+      await untilCalled(mockGetRandomNumberTrivia(any));
+
+      // assert
+      verify(mockGetRandomNumberTrivia(NoParams()));
+    });
+
+    test('should emit [ Loading, Loaded ] when data is gotten successfully',
+        () async {
+      // arrange
+      when(mockGetRandomNumberTrivia(any))
+          .thenAnswer((_) async => Right(tNumberTrivia));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Loaded(trivia: tNumberTrivia),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForRandomNumber());
+    });
+    test('should emit [ Loading, Error ] when getting data fails', () async {
+      // arrange
+      when(mockGetRandomNumberTrivia(any))
+          .thenAnswer((_) async => Left(ServerFailure()));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Error(errorMessage: SERVER_FAILURE_MESSAGE),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForRandomNumber());
+    });
+
+    test('''should emit [ Loading, Error ] with proper 
+        message when getting data fails''', () async {
+      // arrange
+      when(mockGetRandomNumberTrivia(any))
+          .thenAnswer((_) async => Left(ServerFailure()));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Error(errorMessage: SERVER_FAILURE_MESSAGE),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForRandomNumber());
+    });
+
+    test('''should emit [ Loading, Error ] with proper 
+        message for the error when getting data fails''', () async {
+      // arrange
+      when(mockGetRandomNumberTrivia(any))
+          .thenAnswer((_) async => Left(CacheFailure()));
+
+      // assert later
+      // here the asserc comes before act to garantee that expectLater will be called before bloc.dispatch
+      final expected = [
+        Empty(),
+        Loading(),
+        Error(errorMessage: CACHE_FAILURE_MESSAGE),
+      ];
+      expectLater(bloc.state, emitsInOrder(expected));
+
+      // act
+      bloc.dispatch(GetTriviaForRandomNumber());
     });
   });
 }
